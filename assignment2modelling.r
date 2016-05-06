@@ -1,8 +1,8 @@
-setwd("D:\\dropbox\\Dropbox\\36103\\assignment2")
 
 library(readr)
 library(dplyr)
 library(tidyr)
+library(nlme)
 
 energy_consumption <- read_csv("energy_consumption.csv")
 #measured over slightly different timescales assumed same as the periods are similar
@@ -28,6 +28,7 @@ continentlist <- read_csv("Countries-Continents.csv")
 #energy_consumption$`Country name` %in% country_groupings$Country
 
 #renaming the country name column to country
+#backquote needed due to space in name
 energy_consumption = rename(energy_consumption , Country =  `Country name` )
 
 #join on fat consumption and country groupings
@@ -37,10 +38,46 @@ energy_country_frame <- left_join(energy_consumption, country_groupings, by = "C
 #join on continent list
 continentlist <- continentlist [1:2]
 
-energy_country_frame <- left_join(continentlist, fat_country_frame, by = "Country"   )
+energy_country_frame <- left_join( energy_country_frame, continentlist , by = "Country"   )
 
 
-##TODO##
-## join the three frames and create a composite frame
-## http://stackoverflow.com/questions/26611717/can-dplyr-join-on-multiple-columns-or-composite-key
+#JOINING PROTEIN
+#renaming Country Name to Country and getting rid of country code
+protein_consumption <- rename(protein_consumption, Country= `Country name`)
+protein_consumption <- protein_consumption[-1]
+#joining protein
+energy_protein_country_frame <- left_join (protein_consumption, energy_country_frame,  by = c( "Country"="Country", "year" = "year" ))
 
+#JOINING FAT
+#renaming Country NAme to Country 
+fat_consumption <- rename(fat_consumption, Country= `Country name`)
+#joining fat
+energy_protein_fat_country_frame <- left_join (fat_consumption, energy_protein_country_frame,  by = c( "Country"="Country", "year" = "year" ))
+
+#SETTING UP FACTORS FOR MODELLING
+energy_protein_fat_country_frame$`World Group` <- as.factor(energy_protein_fat_country_frame$`World Group`)
+
+#getting rid of extra continent column
+energy_protein_fat_country_frame <- energy_protein_fat_country_frame[-10]
+energy_protein_fat_country_frame <- rename (energy_protein_fat_country_frame, Continent = Continent.x)
+energy_protein_fat_country_frame$Continent  <- as.factor( energy_protein_fat_country_frame$Continent) 
+
+energy_protein_country_frame$year <- as.factor(energy_protein_country_frame$year)
+
+
+#quick conceit to get the basic modelling working
+energy_protein_country_frame_complete <-  energy_protein_fat_country_frame[ complete.cases(energy_protein_fat_country_frame),]
+
+linearfit <- glm( fatvalue ~ year + Continent+ `World Group` + energyvalue + proteinvalue, data= energy_protein_country_frame_complete)
+
+summary(linearfit)
+
+plot(linearfit)
+
+
+energy_protein_country_frame_complete <- rename ( energy_protein_country_frame_complete, WorldGroup = `World Group` )
+lmmfit <- lme(fatvalue ~ year+Continent+WorldGroup+energyvalue+proteinvalue, data= energy_protein_country_frame_complete )
+
+#TODO
+#find out where the damn NA values are coming from in continent
+#fix error: invalid formula for groups
