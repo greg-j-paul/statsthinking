@@ -3,6 +3,8 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(nlme)
+library(gee)
+library(geepack)
 
 energy_consumption <- read_csv("energy_consumption.csv")
 #measured over slightly different timescales assumed same as the periods are similar
@@ -76,7 +78,19 @@ plot(linearfit)
 
 
 energy_protein_country_frame_complete <- rename ( energy_protein_country_frame_complete, WorldGroup = `World Group` )
-lmmfit <- lme(fatvalue ~ year+Continent+WorldGroup+energyvalue+proteinvalue, data= energy_protein_country_frame_complete )
+
+energy_protein_country_frame_complete <- mutate ( energy_protein_country_frame_complete,
+                                                  Country =as.factor(Country),
+                                                  year  =as.factor(year)
+                                                  
+  
+)
+
+geefit <- gee(fatvalue ~ Continent+WorldGroup+energyvalue+proteinvalue, data= energy_protein_country_frame_complete , id = Country)
+
+summary(geefit)
+
+
 
 #TODO
 #find out where the damn NA values are coming from in continent
