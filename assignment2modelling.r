@@ -59,12 +59,17 @@ energy_protein_fat_country_frame <- left_join (fat_consumption, energy_protein_c
 #SETTING UP FACTORS FOR MODELLING
 energy_protein_fat_country_frame$`World Group` <- as.factor(energy_protein_fat_country_frame$`World Group`)
 
-#getting rid of extra continent column
-energy_protein_fat_country_frame <- energy_protein_fat_country_frame[-10]
-energy_protein_fat_country_frame <- rename (energy_protein_fat_country_frame, Continent = Continent.x)
+
 energy_protein_fat_country_frame$Continent  <- as.factor( energy_protein_fat_country_frame$Continent) 
 
-energy_protein_country_frame$year <- as.factor(energy_protein_country_frame$year)
+energy_protein_fat_country_frame$year <- as.factor(energy_protein_country_frame$year)
+
+
+
+#looking for missing values
+
+missingcontinentlist <- is.na (energy_protein_fat_country_frame$Continent)
+missingcontinentframe <- energy_protein_fat_country_frame[missingcontinentlist,]
 
 
 #quick conceit to get the basic modelling working
@@ -79,19 +84,21 @@ plot(linearfit)
 
 energy_protein_country_frame_complete <- rename ( energy_protein_country_frame_complete, WorldGroup = `World Group` )
 
-energy_protein_country_frame_complete <- mutate ( energy_protein_country_frame_complete,
-                                                  Country =as.factor(Country),
-                                                  year  =as.factor(year)
-                                                  
-  
-)
+energy_protein_country_frame_complete$year <- as.factor(energy_protein_country_frame_complete$year)
 
-geefit <- gee(fatvalue ~ Continent+WorldGroup+energyvalue+proteinvalue, data= energy_protein_country_frame_complete , id = Country)
+energy_protein_country_frame_complete$Region <- as.factor(energy_protein_country_frame_complete$Region)
+
+energy_protein_country_frame_complete$countryid <- as.factor(  energy_protein_country_frame_complete$Country)
+
+energy_protein_country_frame_complete$countryid <- as.numeric(energy_protein_country_frame_complete$countryid )
+
+geefit <- geeglm(fatvalue ~ Continent+WorldGroup+energyvalue+proteinvalue, id = countryid, data= na.omit(energy_protein_country_frame_complete))
 
 summary(geefit)
 
 
 
+
+
 #TODO
-#find out where the damn NA values are coming from in continent
-#fix error: invalid formula for groups
+#fix list of missing continents from missingcontinentframe
